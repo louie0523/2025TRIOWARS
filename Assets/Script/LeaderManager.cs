@@ -34,13 +34,14 @@ public class LeaderManager : MonoBehaviour
     {
         if(units.Count > 0)
         {
-
+            return;
         } else
         {
             Unit[] temp = GameObject.FindObjectsOfType<Unit>();
             foreach(Unit unit in temp)
             {
-                units.Add(unit);
+                if(unit.unitData.team == Team.Player)
+                    units.Add(unit);
             }
             units.Sort((x, y) => x.unitData.playerType.CompareTo(y.unitData.playerType));
             ChangeLeader(currentLeaderIndex);

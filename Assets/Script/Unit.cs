@@ -34,6 +34,9 @@ public class Unit : MonoBehaviour
     public float DefaultAttack;
     public float Attack;
     public float AttackRange;
+    public float attackSpeed;
+    public float attackTimer;
+    public float attackRateTime;
     public float Critical_Rate;
     public float Critical_Value;
     public float moveSpeed;
@@ -56,6 +59,7 @@ public class Unit : MonoBehaviour
         SetData();
         navMeshAgent = GetComponent<NavMeshAgent>();
         animator = transform.GetChild(0).GetComponent<Animator>();
+
     }
 
     private void Update()
@@ -94,9 +98,15 @@ public class Unit : MonoBehaviour
             }
         } else
         {
-            if(Leader != null)
+            if (Leader != null )
             {
-                Status = Status.Follow;
+                float dis = Vector3.Distance(transform.position, Leader.position);
+                if (dis > unitData.FriendRadius && unitData.team == Team.Player)
+                    Status = Status.Follow;
+                else
+                    Status = Status.Idle;
+
+                //Status = Status.Follow;
             } else
             {
                 Status = Status.Idle;
@@ -107,7 +117,7 @@ public class Unit : MonoBehaviour
         {
             case Status.Attack:
                 desiredVelocity = Vector3.zero;
-                Debug.Log("°ø°ÝÁß");
+                AttackTarget();
                 break;
             case Status.Chase:
                 Vector3 dir = transform.position - currentTarget.position;
@@ -124,12 +134,15 @@ public class Unit : MonoBehaviour
                 Vector3 pos = Leader.position + LeaderOffset;
                 desiredVelocity = pos;
                 break;
+            case Status.Idle:
+                desiredVelocity = Vector3.zero;
+                break;
         }
     }
 
     private void FixedUpdate()
     {
-        if(Leader == null)
+        if(Leader == null && unitData.team == Team.Player)
         {
             return;
         }
@@ -142,10 +155,13 @@ public class Unit : MonoBehaviour
 
         if(desiredVelocity.sqrMagnitude > 0.01f)
         {
+            navMeshAgent.speed = moveSpeed;
             navMeshAgent.isStopped = false;
+            animator.SetBool("Walk", true);
             navMeshAgent.SetDestination(desiredVelocity);
         } else
         {
+            animator.SetBool("Walk", false);
             navMeshAgent.isStopped = true;
         }
     }
@@ -164,6 +180,7 @@ public class Unit : MonoBehaviour
         Critical_Value = unitData.Critical_Value;
         moveSpeed = unitData.Speed;
         inventoryMax = unitData.InventoryMax;
+        attackRateTime = unitData.AttackSpeed;
     }
 
     bool isVaildTarget(Transform tr)
@@ -173,7 +190,7 @@ public class Unit : MonoBehaviour
             return false;
         }
         Unit unit = tr.GetComponent<Unit>();
-        if (unit == null || unit.CurrentHp < 0 || unit.unitData.team == unitData.team)
+        if (unit == null || unit.CurrentHp <= 0 || unit.unitData.team == unitData.team)
         {
             return false;
         }
@@ -184,6 +201,7 @@ public class Unit : MonoBehaviour
     Transform ResearchTarget()
     {
         Collider[] col = Physics.OverlapSphere(transform.position, unitData.DectecRadius, LayerMask.GetMask("Unit"));
+
 
         Transform target = null;
 
@@ -201,10 +219,24 @@ public class Unit : MonoBehaviour
             {
                 max = distance;
                 target = unit.transform;
+                
             }
         }
 
         return target;
+    }
+
+    void AttackTarget()
+    {
+        attackTimer -= Time.deltaTime;
+        if(attackTimer >= 0)
+        {
+            return;
+        }
+
+        animator.SetTrigger("Attack");
+
+        attackTimer = attackRateTime;
     }
 
 
