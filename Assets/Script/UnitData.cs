@@ -50,4 +50,7 @@ public class UnitData : ScriptableObject
     [Header("성장치")]
     public float HpUp;
     public float AtkUp;
+    [Header("상호작용")]
+    public float DectecRadius = 8f;
+    public float FriendRadius = 1.5f;
 }
