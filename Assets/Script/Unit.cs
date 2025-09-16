@@ -61,69 +61,72 @@ public class Unit : MonoBehaviour
     public Animator animator;
 
     public bool Load = false;
-    public Transform LineStart;
+    public Material UnitMaterial;
+    private Coroutine MaterialCoroutine;
+    public Transform StartPos;
     public LineRenderer lineRenderer;
+
 
 
 
 
     private void Awake()
     {
-        if(unitData.team == Team.Player)
+        if (unitData.team == Team.Player)
         {
             DontDestroyOnLoad(gameObject);
         }
     }
     private void Start()
     {
-        if(!Load)
+        if (!Load)
         {
             SetData();
             navMeshAgent = GetComponent<NavMeshAgent>();
             animator = transform.GetChild(0).GetComponent<Animator>();
-            lineRenderer = transform.GetChild(1).GetComponent<LineRenderer>();
+            lineRenderer = transform.GetChild(2).GetComponent<LineRenderer>();
             Load = true;
         }
-        if(unitData.team == Team.Player)
+        if (unitData.team == Team.Player)
             transform.position = new Vector3(0, 0, 0);
 
     }
 
     private void Update()
     {
-        if(debuff == Debuff.Stun)
+        if (debuff == Debuff.Stun)
         {
             stunTimer -= Time.deltaTime;
-            if(stunTimer > 0)
+            if (stunTimer > 0)
             {
                 return;
             } else
             {
                 debuff = Debuff.None;
             }
-        } 
+        }
 
-        if(Status == Status.Dead)
+        if (Status == Status.Dead)
         {
             return;
         }
 
-        if(currentTarget == null || isVaildTarget(currentTarget))
+        if (currentTarget == null || isVaildTarget(currentTarget))
         {
             currentTarget = ResearchTarget();
         }
 
-        if(currentTarget != null)
+        if (currentTarget != null)
         {
             Unit target = currentTarget.GetComponent<Unit>();
-            if(target.Status == Status.Dead)
+            if (target.Status == Status.Dead)
             {
                 currentTarget = ResearchTarget();
                 return;
             }
 
             float dis = Vector3.Distance(transform.position, currentTarget.position);
-            if(dis < AttackRange)
+            if (dis < AttackRange)
             {
                 Status = Status.Attack;
             } else
@@ -132,7 +135,7 @@ public class Unit : MonoBehaviour
             }
         } else
         {
-            if (Leader != null )
+            if (Leader != null)
             {
                 float dis = Vector3.Distance(transform.position, Leader.position);
                 if (dis > unitData.FriendRadius && unitData.team == Team.Player)
@@ -147,17 +150,17 @@ public class Unit : MonoBehaviour
             }
         }
 
-        switch(Status)
+        switch (Status)
         {
             case Status.Attack:
                 desiredVelocity = Vector3.zero;
                 //if(Leader != null)
-                    AttackTarget(currentTarget);
+                AttackTarget(currentTarget);
                 break;
             case Status.Chase:
                 Vector3 dir = transform.position - currentTarget.position;
                 dir.y = 0;
-                if(dir.sqrMagnitude < 0.1f)
+                if (dir.sqrMagnitude < 0.1f)
                 {
                     desiredVelocity = Vector3.zero;
                 } else
@@ -187,18 +190,18 @@ public class Unit : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if(Leader == null && unitData.team == Team.Player)
+        if (Leader == null && unitData.team == Team.Player)
         {
             return;
         }
 
-        if(navMeshAgent == null)
+        if (navMeshAgent == null)
         {
             navMeshAgent = GetComponent<NavMeshAgent>();
             return;
         }
 
-        if(desiredVelocity.sqrMagnitude > 0.01f)
+        if (desiredVelocity.sqrMagnitude > 0.01f)
         {
             navMeshAgent.speed = moveSpeed;
             navMeshAgent.isStopped = false;
@@ -226,17 +229,17 @@ public class Unit : MonoBehaviour
         moveSpeed = unitData.Speed;
         inventoryMax = unitData.InventoryMax;
         attackRateTime = unitData.AttackSpeed;
-        
+
     }
 
     bool isVaildTarget(Transform tr)
     {
-        if(tr == null)
+        if (tr == null)
         {
             return false;
         }
         Unit unit = tr.GetComponent<Unit>();
-        if (unit == null || unit.CurrentHp <= 0 || unit.unitData.team == unitData.team )
+        if (unit == null || unit.CurrentHp <= 0 || unit.unitData.team == unitData.team)
         {
             return false;
         }
@@ -252,24 +255,24 @@ public class Unit : MonoBehaviour
         Transform target = null;
 
         float max = float.MaxValue;
-        for(int i = 0; i < col.Length; i++)
+        for (int i = 0; i < col.Length; i++)
         {
             Unit unit = col[i].GetComponent<Unit>();
-            if(unit == null || unit.CurrentHp <= 0 || unit.unitData.team == unitData.team || unit.Status == Status.Dead)
+            if (unit == null || unit.CurrentHp <= 0 || unit.unitData.team == unitData.team || unit.Status == Status.Dead)
             {
                 continue;
             }
 
             float distance = Vector3.Distance(transform.position, unit.transform.position);
-            if(max > distance)
+            if (max > distance)
             {
                 max = distance;
                 target = unit.transform;
-                
+
             }
         }
 
-        if(!debug)
+        if (!debug)
         {
             Debug.Log("타겟 반환 " + target.gameObject.name);
         }
@@ -280,7 +283,7 @@ public class Unit : MonoBehaviour
     void AttackTarget(Transform tr)
     {
         attackTimer -= Time.deltaTime;
-        if(attackTimer >= 0)
+        if (attackTimer >= 0)
         {
             return;
         }
@@ -294,13 +297,14 @@ public class Unit : MonoBehaviour
 
         Unit unit = tr.GetComponent<Unit>();
 
-        if(unit == null)
+        if (unit == null)
         {
             return;
         }
-            
 
-        unit.Damage(CurrentAttack(), this); 
+
+        unit.Damage(CurrentAttack(), this);
+
 
         animator.SetTrigger("Attack");
 
@@ -309,12 +313,12 @@ public class Unit : MonoBehaviour
 
     void LeaderAttackTarget(Transform tr)
     {
-        if(attackTimer >= 0)
-        {   
+        if (attackTimer >= 0)
+        {
             return;
         }
 
-        if(tr == null)
+        if (tr == null)
         {
             return;
         }
@@ -343,7 +347,7 @@ public class Unit : MonoBehaviour
 
     public bool Damage(float damage, Unit Attacker)
     {
-        if(Status == Status.Dead)
+        if (Status == Status.Dead)
         {
             return true;
         }
@@ -351,8 +355,8 @@ public class Unit : MonoBehaviour
         if (Attacker.unitData.team == Team.Player)
         {
             float giveExp = unitData.KillExp * (Attacker.CurrentAttack() / MaxHp);
-            if(damage > CurrentHp)
-                 giveExp = unitData.KillExp * (CurrentHp / MaxHp);
+            if (damage > CurrentHp)
+                giveExp = unitData.KillExp * (CurrentHp / MaxHp);
 
             Debug.Log(giveExp);
 
@@ -364,7 +368,7 @@ public class Unit : MonoBehaviour
 
 
 
-        if(CurrentHp <= 0)
+        if (CurrentHp <= 0)
         {
             animator.SetTrigger("Death");
             Status = Status.Dead;
@@ -372,7 +376,7 @@ public class Unit : MonoBehaviour
             {
                 foreach (Unit unit in LeaderManager.instance.units)
                 {
-                    if(unit.unitData.team == Team.Player)
+                    if (unit.unitData.team == Team.Player)
                     {
                         unit.Exp += unitData.KillExp / 10;
                         unit.ExpCheck();
@@ -380,9 +384,9 @@ public class Unit : MonoBehaviour
                 }
             } else
             {
-                if(LeaderManager.instance.currentLeaderUnit == this)
+                if (LeaderManager.instance.currentLeaderUnit == this)
                 {
-                    if(LeaderManager.instance.units.Count <= 1)
+                    if (LeaderManager.instance.units.Count <= 1)
                     {
                         Debug.Log("게임 오바");
                     } else
@@ -400,11 +404,13 @@ public class Unit : MonoBehaviour
 
 
             //Attacker.currentTarget = ResearchTarget();
-            if(unitData.team == Team.Enemy) {
+            if (unitData.team == Team.Enemy) {
                 StartCoroutine(EnemyObjDestory(3f));
             }
             return true;
         }
+
+        TookDamageColor();
 
         return false;
 
@@ -416,7 +422,7 @@ public class Unit : MonoBehaviour
         if (Lv >= 20)
             return;
 
-        while(Exp >= MaxExp)
+        while (Exp >= MaxExp)
         {
             Exp -= MaxExp;
             Lv++;
@@ -437,6 +443,22 @@ public class Unit : MonoBehaviour
     {
         yield return new WaitForSeconds(time);
         Destroy(gameObject);
+    }
+
+    void TookDamageColor()
+    {
+        if (MaterialCoroutine != null)
+            StopCoroutine(MaterialCoroutine);
+
+        UnitMaterial.color = Color.white;
+        MaterialCoroutine = StartCoroutine(SetMaterial());
+    }
+
+    IEnumerator SetMaterial()
+    {
+        UnitMaterial.color = Color.red;
+        yield return new WaitForSeconds(0.25f);
+        UnitMaterial.color = Color.white;
     }
 
 

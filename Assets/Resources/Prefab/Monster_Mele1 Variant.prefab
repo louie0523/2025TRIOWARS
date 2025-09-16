@@ -188,6 +188,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 11400000, guid: 448e20b83f143f74cb5284dbe2ca2010, type: 2}
     - target: {fileID: 4192169589421746872, guid: 6a3e7408bf33fca4aa89549b1cae81a4, type: 3}
+      propertyPath: UnitMaterial
+      value: 
+      objectReference: {fileID: 2100000, guid: 545d4cce30ed3144dace430471f72e3c, type: 2}
+    - target: {fileID: 4192169589421746872, guid: 6a3e7408bf33fca4aa89549b1cae81a4, type: 3}
       propertyPath: navMeshAgent
       value: 
       objectReference: {fileID: 2694953329808443894}
