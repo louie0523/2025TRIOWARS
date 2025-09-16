@@ -24,7 +24,13 @@ MonoBehaviour:
   Critical_Value: 2
   Speed: 5.5
   InventoryMax: 4
+  HaveSkill:
+  - {fileID: 11400000, guid: e247b45102f222f4e838d13333bfe1b8, type: 2}
+  - {fileID: 11400000, guid: f911b7c0e020f4e409d58d21fc5951e5, type: 2}
+  - {fileID: 11400000, guid: 96d2db6b71fcf07408cfa943aeeea8d0, type: 2}
+  - {fileID: 11400000, guid: 45b5f93afb21dee4396912ca1b3a10fc, type: 2}
   HpUp: 0
   AtkUp: 0
   DectecRadius: 8
-  FriendRadius: 1.5
+  FriendRadius: 2.9
+  KillExp: 0

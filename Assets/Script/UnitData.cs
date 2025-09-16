@@ -47,10 +47,14 @@ public class UnitData : ScriptableObject
     public float Critical_Value = 2;
     public float Speed;
     public int InventoryMax = 4;
+    [SerializeField]
+    public List<SKillInfo> HaveSkill = new List<SKillInfo>();
     [Header("성장치")]
     public float HpUp;
     public float AtkUp;
     [Header("상호작용")]
     public float DectecRadius = 8f;
     public float FriendRadius = 1.5f;
+    [Header("적 정보")]
+    public float KillExp;
 }

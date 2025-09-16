@@ -77,6 +77,7 @@ public class LeaderManager : MonoBehaviour
         cc.center = new Vector3(0, 1, 0);
 
         int count = 0;
+
         for(int i = 0; i < units.Count; i++)
         {
             if(i == currentLeaderIndex)
@@ -91,6 +92,11 @@ public class LeaderManager : MonoBehaviour
                 units[i].LeaderOffset = UnitOffset[count];
                 count++;
             }
+        }
+        List<Unit> EnemyUnit = GameManager.instance.UnitsGet(1);
+        for(int i = 0; i < EnemyUnit.Count; i++ )
+        {
+            EnemyUnit[i].Leader = currentLeaderUnit.transform;
         }
     }
 

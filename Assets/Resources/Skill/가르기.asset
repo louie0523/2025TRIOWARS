@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e8c4b396e92457c40b39e42af63ee735, type: 3}
+  m_Name: "\uAC00\uB974\uAE30"
+  m_EditorClassIdentifier: 
+  SkillName: "\uAC00\uB974\uAE30"
+  icon: {fileID: 21300000, guid: 1c43d9158f0694b47a2d638c5c22f4e0, type: 3}
+  MaxTarget: 0200000003000000030000000400000005000000
+  Attack_Value:
+  - 1
+  - 1.2
+  - 1.2
+  - 1.4
+  - 1.4
+  UseMp: 0c0000000f000000120000001400000016000000
+  CoolTime: 0300000003000000020000000200000002000000

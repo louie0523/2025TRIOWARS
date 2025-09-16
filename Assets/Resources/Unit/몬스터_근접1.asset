@@ -24,7 +24,9 @@ MonoBehaviour:
   Critical_Value: 2
   Speed: 4.5
   InventoryMax: 4
+  HaveSkill: []
   HpUp: 0
   AtkUp: 0
   DectecRadius: 8
   FriendRadius: 1.5
+  KillExp: 100

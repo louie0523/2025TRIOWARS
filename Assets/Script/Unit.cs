@@ -27,6 +27,10 @@ public class Unit : MonoBehaviour
     public UnitData unitData;
 
     [Header("스테이터스")]
+    public int Lv;
+    public float Exp;
+    public float MaxExp = 100;
+    public float PlusMaxExp = 200;
     public float MaxHp;
     public float CurrentHp;
     public float MaxMp;
@@ -34,13 +38,17 @@ public class Unit : MonoBehaviour
     public float DefaultAttack;
     public float Attack;
     public float AttackRange;
-    public float attackSpeed;
     public float attackTimer;
+    public float AttackSpped = 1f;
     public float attackRateTime;
     public float Critical_Rate;
     public float Critical_Value;
     public float moveSpeed;
     public int inventoryMax;
+    public List<int> SkillLv = new List<int>()
+    {
+        0,0,0,0
+    };
     [Header("유닛 정보")]
     public Transform Leader;
     public Transform currentTarget;
@@ -51,14 +59,33 @@ public class Unit : MonoBehaviour
     public NavMeshAgent navMeshAgent;
     public Vector3 LeaderOffset;
     public Animator animator;
-    
+
+    public bool Load = false;
+    public Transform LineStart;
+    public LineRenderer lineRenderer;
 
 
+
+
+    private void Awake()
+    {
+        if(unitData.team == Team.Player)
+        {
+            DontDestroyOnLoad(gameObject);
+        }
+    }
     private void Start()
     {
-        SetData();
-        navMeshAgent = GetComponent<NavMeshAgent>();
-        animator = transform.GetChild(0).GetComponent<Animator>();
+        if(!Load)
+        {
+            SetData();
+            navMeshAgent = GetComponent<NavMeshAgent>();
+            animator = transform.GetChild(0).GetComponent<Animator>();
+            lineRenderer = transform.GetChild(1).GetComponent<LineRenderer>();
+            Load = true;
+        }
+        if(unitData.team == Team.Player)
+            transform.position = new Vector3(0, 0, 0);
 
     }
 
@@ -88,6 +115,13 @@ public class Unit : MonoBehaviour
 
         if(currentTarget != null)
         {
+            Unit target = currentTarget.GetComponent<Unit>();
+            if(target.Status == Status.Dead)
+            {
+                currentTarget = ResearchTarget();
+                return;
+            }
+
             float dis = Vector3.Distance(transform.position, currentTarget.position);
             if(dis < AttackRange)
             {
@@ -117,7 +151,8 @@ public class Unit : MonoBehaviour
         {
             case Status.Attack:
                 desiredVelocity = Vector3.zero;
-                AttackTarget();
+                //if(Leader != null)
+                    AttackTarget(currentTarget);
                 break;
             case Status.Chase:
                 Vector3 dir = transform.position - currentTarget.position;
@@ -138,6 +173,16 @@ public class Unit : MonoBehaviour
                 desiredVelocity = Vector3.zero;
                 break;
         }
+
+        //if(Status == Status.Attack && Leader == null && attackTimer >= 0)
+        //{
+        //    attackTimer -= Time.deltaTime;
+        //}
+
+        //if(Status == Status.Attack && Input.GetKeyDown(KeyCode.Mouse0) && Leader == null)
+        //{
+        //    LeaderAttackTarget(currentTarget);
+        //}
     }
 
     private void FixedUpdate()
@@ -181,6 +226,7 @@ public class Unit : MonoBehaviour
         moveSpeed = unitData.Speed;
         inventoryMax = unitData.InventoryMax;
         attackRateTime = unitData.AttackSpeed;
+        
     }
 
     bool isVaildTarget(Transform tr)
@@ -190,7 +236,7 @@ public class Unit : MonoBehaviour
             return false;
         }
         Unit unit = tr.GetComponent<Unit>();
-        if (unit == null || unit.CurrentHp <= 0 || unit.unitData.team == unitData.team)
+        if (unit == null || unit.CurrentHp <= 0 || unit.unitData.team == unitData.team )
         {
             return false;
         }
@@ -198,7 +244,7 @@ public class Unit : MonoBehaviour
         return true;
     }
 
-    Transform ResearchTarget()
+    Transform ResearchTarget(bool debug = true)
     {
         Collider[] col = Physics.OverlapSphere(transform.position, unitData.DectecRadius, LayerMask.GetMask("Unit"));
 
@@ -209,7 +255,7 @@ public class Unit : MonoBehaviour
         for(int i = 0; i < col.Length; i++)
         {
             Unit unit = col[i].GetComponent<Unit>();
-            if(unit == null || unit.CurrentHp <= 0 || unit.unitData.team == unitData.team)
+            if(unit == null || unit.CurrentHp <= 0 || unit.unitData.team == unitData.team || unit.Status == Status.Dead)
             {
                 continue;
             }
@@ -223,10 +269,15 @@ public class Unit : MonoBehaviour
             }
         }
 
+        if(!debug)
+        {
+            Debug.Log("타겟 반환 " + target.gameObject.name);
+        }
+
         return target;
     }
 
-    void AttackTarget()
+    void AttackTarget(Transform tr)
     {
         attackTimer -= Time.deltaTime;
         if(attackTimer >= 0)
@@ -234,9 +285,158 @@ public class Unit : MonoBehaviour
             return;
         }
 
+
+        if (tr == null)
+        {
+            return;
+        }
+
+
+        Unit unit = tr.GetComponent<Unit>();
+
+        if(unit == null)
+        {
+            return;
+        }
+            
+
+        unit.Damage(CurrentAttack(), this); 
+
         animator.SetTrigger("Attack");
 
-        attackTimer = attackRateTime;
+        attackTimer = attackRateTime / AttackSpped;
+    }
+
+    void LeaderAttackTarget(Transform tr)
+    {
+        if(attackTimer >= 0)
+        {   
+            return;
+        }
+
+        if(tr == null)
+        {
+            return;
+        }
+
+
+        Unit unit = tr.GetComponent<Unit>();
+
+        if (unit == null)
+        {
+            return;
+        }
+
+
+        unit.Damage(CurrentAttack(), this);
+
+        animator.SetTrigger("Attack");
+
+        attackTimer = attackRateTime / AttackSpped;
+    }
+
+    public float CurrentAttack()
+    {
+        return Attack + DefaultAttack;
+    }
+
+
+    public bool Damage(float damage, Unit Attacker)
+    {
+        if(Status == Status.Dead)
+        {
+            return true;
+        }
+
+        if (Attacker.unitData.team == Team.Player)
+        {
+            float giveExp = unitData.KillExp * (Attacker.CurrentAttack() / MaxHp);
+            if(damage > CurrentHp)
+                 giveExp = unitData.KillExp * (CurrentHp / MaxHp);
+
+            Debug.Log(giveExp);
+
+            Attacker.Exp += giveExp;
+            Attacker.ExpCheck();
+        }
+
+        CurrentHp -= damage;
+
+
+
+        if(CurrentHp <= 0)
+        {
+            animator.SetTrigger("Death");
+            Status = Status.Dead;
+            if (Attacker.unitData.team == Team.Player)
+            {
+                foreach (Unit unit in LeaderManager.instance.units)
+                {
+                    if(unit.unitData.team == Team.Player)
+                    {
+                        unit.Exp += unitData.KillExp / 10;
+                        unit.ExpCheck();
+                    }
+                }
+            } else
+            {
+                if(LeaderManager.instance.currentLeaderUnit == this)
+                {
+                    if(LeaderManager.instance.units.Count <= 1)
+                    {
+                        Debug.Log("게임 오바");
+                    } else
+                    {
+                        LeaderManager.instance.units.Remove(this);
+                        LeaderManager.instance.currentLeaderIndex = 0;
+                        LeaderManager.instance.ChangeLeader(LeaderManager.instance.currentLeaderIndex);
+                    }
+                } else
+                {
+                    LeaderManager.instance.units.Remove(this);
+
+                }
+            }
+
+
+            //Attacker.currentTarget = ResearchTarget();
+            if(unitData.team == Team.Enemy) {
+                StartCoroutine(EnemyObjDestory(3f));
+            }
+            return true;
+        }
+
+        return false;
+
+
+    }
+
+    public void ExpCheck()
+    {
+        if (Lv >= 20)
+            return;
+
+        while(Exp >= MaxExp)
+        {
+            Exp -= MaxExp;
+            Lv++;
+            MaxExp += PlusMaxExp;
+            Debug.Log(gameObject.name + "이가 레벨업 했습니다!");
+            MaxHp += unitData.HpUp;
+            CurrentHp += unitData.HpUp;
+            Attack += unitData.AtkUp;
+
+            if (Lv == 1 || Lv % 3 == 0)
+            {
+                StartCoroutine(GameManager.instance.ChooseSkill(this));
+            }
+        }
+    }
+
+    IEnumerator EnemyObjDestory(float time)
+    {
+        yield return new WaitForSeconds(time);
+        Destroy(gameObject);
     }
 
 
