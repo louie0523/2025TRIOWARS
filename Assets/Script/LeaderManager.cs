@@ -76,6 +76,9 @@ public class LeaderManager : MonoBehaviour
         CharacterController cc =  currentLeaderUnit.AddComponent<CharacterController>();
         cc.center = new Vector3(0, 1, 0);
 
+
+        UImanager.instance.CurrentPlayerIconSet();
+
         int count = 0;
 
         for(int i = 0; i < units.Count; i++)

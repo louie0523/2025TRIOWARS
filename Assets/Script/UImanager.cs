@@ -16,6 +16,15 @@ public class UImanager : MonoBehaviour
     public Text MessageText;
     public float FadeTIme = 2.5f;
 
+    [Header("플레이어 UI")]
+    public GameObject PlayerUi;
+    public GameObject CharacterParent;
+    public Slider HpSlider;
+    public Slider MpSlider;
+    public Slider ExpSlider;
+    public GameObject SkillGrid;
+    public Text LvText;
+
 
     private Coroutine MessageCorutine;
 
@@ -30,9 +39,32 @@ public class UImanager : MonoBehaviour
         }
     }
 
+    private void Update()
+    {
+        if(PlayerUi.activeSelf)
+        {
+            HpSlider.value = LeaderManager.instance.currentLeaderUnit.CurrentHp / LeaderManager.instance.currentLeaderUnit.MaxHp;
+            MpSlider.value = LeaderManager.instance.currentLeaderUnit.CurrentMp / LeaderManager.instance.currentLeaderUnit.MaxMp;
+            ExpSlider.value = LeaderManager.instance.currentLeaderUnit.Exp / LeaderManager.instance.currentLeaderUnit.MaxExp;
+
+            Text HpText = HpSlider.transform.GetChild(2).GetComponent<Text>();
+            Text MpText = MpSlider.transform.GetChild(2).GetComponent<Text>();
+            Text ExpText = ExpSlider.transform.GetChild(2).GetComponent<Text>();
+
+            HpText.text = $"{(int)LeaderManager.instance.currentLeaderUnit.CurrentHp} / {(int)LeaderManager.instance.currentLeaderUnit.MaxHp}";
+            MpText.text = $"{(int)LeaderManager.instance.currentLeaderUnit.CurrentMp} / {(int)LeaderManager.instance.currentLeaderUnit.MaxMp}";
+            ExpText.text = $"{(int)LeaderManager.instance.currentLeaderUnit.Exp} / {(int)LeaderManager.instance.currentLeaderUnit.MaxExp}";
+
+            LvText.text = $"Lv.{LeaderManager.instance.currentLeaderUnit.Lv}";
+
+            SkillUISet();
+        }
+    }
+
     public void OpenSkillUI(Unit unit)
     {
         SkillUI.SetActive(true);
+        PlayerUi.SetActive(false);
 
         for(int i = 0; i < CurrentPlayerParent.transform.childCount; i++)
         {
@@ -62,6 +94,7 @@ public class UImanager : MonoBehaviour
         {
             Image icon = PrivateSkillParent.transform.GetChild(i).transform.GetChild(0).transform.GetChild(0).GetComponent<Image>();
             icon.sprite = unit.unitData.HaveSkill[i].icon;
+            icon.color = unit.unitData.HaveSkill[i].IconColor;
             Text skillName = PrivateSkillParent.transform.GetChild(i).transform.GetChild(1).GetComponent<Text>();
             skillName.text = unit.unitData.HaveSkill[i].SkillName;
             GameObject Slv = PrivateSkillParent.transform.GetChild(i).transform.GetChild(2).gameObject;
@@ -115,6 +148,50 @@ public class UImanager : MonoBehaviour
 
         MessageText.text = "";
     }
+
+
+    public void CurrentPlayerIconSet()
+    {
+        for(int i = 0; i < 3; i++)
+        {
+            if(i == LeaderManager.instance.currentLeaderIndex)
+            {
+                CharacterParent.transform.GetChild(i).gameObject.SetActive(true);
+            } else
+            {
+                CharacterParent.transform.GetChild(i).gameObject.SetActive(false);
+            }
+        }
+
+    }
+
+    public void SkillUISet()
+    {
+        Unit unit = LeaderManager.instance.currentLeaderUnit;
+
+        for (int i = 0; i < 4; i++)
+        {
+            GameObject skill = SkillGrid.transform.GetChild(i).gameObject;
+            Image icon = skill.transform.GetChild(0).GetComponent<Image>();
+            Text cost = skill.transform.GetChild(1).GetComponent<Text>();
+            Image cool = skill.transform.GetChild(2).GetComponent<Image>();
+            icon.color = unit.unitData.HaveSkill[i].IconColor;
+            if (unit.SkillLv[i] >= 1)
+            {
+                icon.color = new Color(icon.color.r, icon.color.g, icon.color.b, 1f);
+                icon.sprite = unit.unitData.HaveSkill[i].icon;
+                cost.text = unit.unitData.HaveSkill[i].UseMp[unit.SkillLv[i]-1].ToString();
+                cool.fillAmount = unit.skillCooltime[i] / unit.unitData.HaveSkill[i].CoolTime[unit.SkillLv[i]-1];
+            } else
+            {
+                icon.color = new Color(icon.color.r, icon.color.g, icon.color.b, 0f);
+                cost.text = "";
+                cool.fillAmount = 0;
+            }
+
+        }
+    }
+
 
     
 

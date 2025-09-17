@@ -4,38 +4,35 @@ using UnityEngine;
 
 public class Bullet : MonoBehaviour
 {
-    public Transform Target;
-    public float lifeTime;
-    public float SetTime;
-    public float speed;
+    public float distance;
+    public Unit unit;
 
     private void Update()
     {
-        if (gameObject.activeSelf)
             Shot();
-
-
     }
 
     void Shot()
     {
-        lifeTime -= Time.deltaTime;
-        if (lifeTime <= 0)
-        {
-            gameObject.SetActive(false);
-        }
 
-        if (Target != null)
-        {
-            Vector3 dir = (Target.position - transform.position).normalized;
-            transform.position = dir * speed * Time.deltaTime;
-            transform.forward = dir;
-        }
-        else
-        {
-            transform.position += transform.forward * speed * Time.deltaTime;
-        }
+        float dis = Vector3.Distance(transform.position, unit.transform.position);
+        if (dis > distance)
+            Destroy(gameObject);
 
     }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if(other.gameObject.layer == LayerMask.NameToLayer("Unit"))
+        {
+            Unit vic = other.GetComponent<Unit>();
+            if(vic.unitData.team != Team.Player)
+            {
+                vic.Damage((unit.CurrentAttack() * unit.unitData.HaveSkill[1].Attack_Value[unit.SkillLv[1]-1]), unit, true);
+                Destroy(gameObject);
+            }
+        }
+    }
+
 
 }

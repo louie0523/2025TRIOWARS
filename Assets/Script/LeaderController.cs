@@ -20,6 +20,26 @@ public class LeaderController : MonoBehaviour
     {
         Move();
         Rotation();
+
+        if (Input.GetKeyDown(KeyCode.Alpha1))
+        {
+            unit.UseSkill(0);
+        }
+        if (Input.GetKeyDown(KeyCode.Alpha2))
+        {
+            unit.UseSkill(1);
+
+        }
+        if (Input.GetKeyDown(KeyCode.Alpha3))
+        {
+            unit.UseSkill(2);
+
+        }
+        if (Input.GetKeyDown(KeyCode.Alpha4))
+        {
+            unit.UseSkill(3);
+
+        }
     }
 
     void Move()
@@ -29,6 +49,9 @@ public class LeaderController : MonoBehaviour
             characterController = GetComponent<CharacterController>();
             return;
         }
+
+        if (unit.ArrowRaing)
+            return;
 
         float h = Input.GetAxis("Horizontal");
         float v = Input.GetAxis("Vertical");

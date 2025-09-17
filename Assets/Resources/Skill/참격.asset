@@ -15,11 +15,25 @@ MonoBehaviour:
   SkillName: "\uCC38\uACA9"
   icon: {fileID: 21300000, guid: 1555e846a7587604088e3d98b3ae5d3a, type: 3}
   MaxTarget: 0100000001000000010000000100000001000000
+  NeedTarget: 0
   Attack_Value:
   - 1.2
   - 1.4
   - 1.6
   - 1.8
   - 2
+  Plus_Skill_Value:
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  Plus_Skill2_Value:
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
   UseMp: 0a0000000b0000000c0000000d0000000f000000
   CoolTime: 0300000003000000020000000200000002000000
+  IconColor: {r: 1, g: 1, b: 1, a: 1}

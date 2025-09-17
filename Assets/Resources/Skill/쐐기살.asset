@@ -15,6 +15,7 @@ MonoBehaviour:
   SkillName: "\uC410\uAE30\uC0B4"
   icon: {fileID: 21300000, guid: 20bda55c236861e458eeaee0c5ce0c82, type: 3}
   MaxTarget: 0100000001000000010000000100000001000000
+  NeedTarget: 0
   Attack_Value:
   - 1
   - 1.2
@@ -35,3 +36,4 @@ MonoBehaviour:
   - 7
   UseMp: 0a0000000b0000000c0000000d0000000e000000
   CoolTime: 0500000004000000040000000300000003000000
+  IconColor: {r: 1, g: 1, b: 1, a: 1}

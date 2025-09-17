@@ -70,7 +70,7 @@ public class GameManager : MonoBehaviour
 
             if (SkillChooser.SkillLv[num] < 5)
             {
-
+                SkillChooser.SkillLv[num]++;
             } else
             {
                 UImanager.instance.Message("해당 유닛 스킬은 이미 최고 레벨 입니다.");
@@ -92,6 +92,7 @@ public class GameManager : MonoBehaviour
 
         Choosing = false;
         UImanager.instance.SkillUI.SetActive(false);
+        UImanager.instance.PlayerUi.SetActive(true);
         Time.timeScale = 1f;
     }
 
@@ -123,20 +124,20 @@ public class GameManager : MonoBehaviour
             switch (num)
             {
                 case 0:
-                    u.Critical_Rate += list[SkillChooser.SkillLv[num]];
+                    u.Critical_Rate += list[PublicSkillLv[num]];
                     break;
                 case 1:
-                    u.AttackSpped += list[SkillChooser.SkillLv[num]];
+                    u.AttackSpped += list[PublicSkillLv[num]];
                     break;
                 case 2:
-                    u.MaxHp += list[SkillChooser.SkillLv[num]];
-                    u.CurrentHp += list[SkillChooser.SkillLv[num]];
+                    u.MaxHp += list[PublicSkillLv[num]];
+                    u.CurrentHp += list[PublicSkillLv[num]];
                     break;
                 case 3:
-                    u.moveSpeed += u.unitData.Speed * list[SkillChooser.SkillLv[num]];
+                    u.moveSpeed += u.unitData.Speed * list[PublicSkillLv[num]];
                     break;
                 case 4:
-                    u.Attack += list[SkillChooser.SkillLv[num]];
+                    u.Attack += list[PublicSkillLv[num]];
                     break;
             }
 

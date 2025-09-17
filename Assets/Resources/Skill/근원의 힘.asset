@@ -10,11 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e8c4b396e92457c40b39e42af63ee735, type: 3}
-  m_Name: "\uB099\uC11D"
+  m_Name: "\uADFC\uC6D0\uC758 \uD798"
   m_EditorClassIdentifier: 
-  SkillName: "\uB099\uC11D"
-  icon: {fileID: 0}
+  SkillName: "\uADFC\uC6D0\uC758 \uD798"
+  icon: {fileID: 21300000, guid: 83ab4734c02fd5b4991c745ed02ae0d2, type: 3}
   MaxTarget: 0100000001000000010000000100000001000000
+  NeedTarget: 0
   Attack_Value:
   - 1
   - 1.1
@@ -35,3 +36,4 @@ MonoBehaviour:
   - 5
   UseMp: 0500000006000000070000000800000009000000
   CoolTime: 0400000004000000030000000300000002000000
+  IconColor: {r: 1, g: 1, b: 1, a: 1}

@@ -45,6 +45,7 @@ public class EnemyGroup : MonoBehaviour
             float Z = Random.Range(-2f, 2f);
             Vector3 vec = transform.position + new Vector3(X, 0, Z);
             Unit unit = Instantiate(MainEnemy, vec, Quaternion.identity, transform).GetComponent<Unit>();
+            unit.gameObject.name = gameObject.name + "Àû" + i;
         }
 
         for(int i = 0; i < SubEnemyCount; i++)
