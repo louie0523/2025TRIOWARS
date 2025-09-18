@@ -2,11 +2,29 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.VisualScripting;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.UI;
 
 
+[System.Serializable]
+public class Positon
+{
+    public float PostionTimter;
+    public float PdamageTimer;
+    public float Damage;
+    public float speedDonw;
+    public Unit Pattacker;
+
+    public Positon(float time, float damage, float speedDown, Unit unit)
+    {
+        PostionTimter = time;
+        Damage = damage;
+        speedDonw = speedDown;
+        Pattacker = unit;
+    }
+}
 public enum Debuff
 {
     None,
@@ -35,11 +53,26 @@ public class RangeUnitList
     }
 }
 
+[System.Serializable]
+public class inventorys
+{
+    public ItemInfo ItemInfo;
+    public int counts;
+
+    public inventorys(ItemInfo item)
+    {
+        ItemInfo = item;
+        counts = 1;
+    }
+
+}
+
 public class Unit : MonoBehaviour
 {
     public UnitData unitData;
 
     [Header("스테이터스")]
+    public bool isObj = false;
     public int Lv;
     public float Exp;
     public float MaxExp = 100;
@@ -57,7 +90,9 @@ public class Unit : MonoBehaviour
     public float Critical_Rate;
     public float Critical_Value;
     public float moveSpeed;
+    public float DownSpeed;
     public int inventoryMax;
+    public List<inventorys> inventory = new List<inventorys>();
     public List<int> SkillLv = new List<int>()
     {
         0,0,0,0
@@ -73,6 +108,10 @@ public class Unit : MonoBehaviour
     public Vector3 desiredVelocity;
     public Status Status;
     public Debuff debuff;
+    public float Cool1sTimer;
+    public float HalfCostTimer;
+    public ParticleSystem ResqueEffect;
+    public Positon Positon = new Positon(0, 0, 0, null);
     public float stunTimer;
     public NavMeshAgent navMeshAgent;
     public Vector3 LeaderOffset;
@@ -94,6 +133,9 @@ public class Unit : MonoBehaviour
     private Coroutine LineRenderCoroutine;
     public bool SkillUseing = false;
     public GameObject StunObj;
+    public GameObject PostionObj;
+    public List<Transform> staticPos = new List<Transform>();
+    
 
 
 
@@ -102,6 +144,9 @@ public class Unit : MonoBehaviour
 
     private void Awake()
     {
+        if (isObj)
+            return;
+
         if (unitData.team == Team.Player)
         {
             DontDestroyOnLoad(gameObject);
@@ -113,7 +158,8 @@ public class Unit : MonoBehaviour
                 Meshobj.GetComponent<Renderer>().material = UnitMaterial;  // 렌더러에 인스턴스된 머티리얼 적용
             }
 
-            StunObj = transform.GetChild(1).gameObject;
+            StunObj = transform.GetChild(2).gameObject;
+            PostionObj = transform.GetChild(3).gameObject;
         }
 
     }
@@ -122,9 +168,12 @@ public class Unit : MonoBehaviour
         if (!Load)
         {
             SetData();
+            if (isObj)
+                return;
+
             navMeshAgent = GetComponent<NavMeshAgent>();
             animator = transform.GetChild(0).GetComponent<Animator>();
-            if(unitData.team == Team.Player)
+            if(unitData.team == Team.Player || unitData.Range >= 3)
                 lineRenderer = transform.GetChild(1).GetComponent<LineRenderer>();
             Load = true;
         }
@@ -135,6 +184,28 @@ public class Unit : MonoBehaviour
 
     private void Update()
     {
+
+        if (isObj)
+            return;
+
+        if(unitData.playerType == PlayerType.Magic)
+        {
+            LineRenderer line2 = SkillEffect[0].GetComponent<LineRenderer>();
+            if (staticPos.Count > 0)
+            {
+                for (int i = 0; i < staticPos.Count; i++)
+                {
+                    line2.positionCount = i + 1;
+                    line2.SetPosition(i, staticPos[i].position + new Vector3(0, 1, 0));
+                }
+            }
+            else
+            {
+                line2.positionCount = 0;
+            }
+        }
+      
+
         if (debuff == Debuff.Stun)
         {
             stunTimer -= Time.deltaTime;
@@ -149,12 +220,39 @@ public class Unit : MonoBehaviour
             }
         }
 
+        if(Cool1sTimer > 0)
+        {
+            Cool1sTimer -= Time.deltaTime;
+        }
+
+        if(HalfCostTimer > 0)
+        {
+            HalfCostTimer -= Time.deltaTime;
+        }
+
         if (ArrowRaing)
             return;
 
         if (Status == Status.Dead)
         {
             return;
+        }
+
+        if(Positon.PostionTimter > 0 && unitData.team == Team.Enemy)
+        {
+            PostionObj.SetActive(true);
+            Positon.PostionTimter -= Time.deltaTime;
+            if(Positon.PdamageTimer < 1)
+            {
+                Positon.PdamageTimer -= Time.deltaTime;
+            } else
+            {
+                Damage(Positon.Damage, Positon.Pattacker);
+                Positon.PdamageTimer = 0;
+            }
+        } else if(unitData.team == Team.Enemy)
+        {
+            PostionObj.SetActive(false);
         }
 
         SkillCoolDown();
@@ -178,12 +276,13 @@ public class Unit : MonoBehaviour
             MpHeal(MaxMp * 0.01f);
             ManaTimer = 0f;
         }
+
         
 
         if (lineRenderer != null && lineRenderer.positionCount >= 2)
         {
             lineRenderer.SetPosition(0, StartPos.position);
-            lineRenderer.SetPosition(1, Endpos.position);
+            lineRenderer.SetPosition(1, Endpos.position + new Vector3(0, 1, 0));
         }
 
         if (currentTarget == null || isVaildTarget(currentTarget))
@@ -233,7 +332,8 @@ public class Unit : MonoBehaviour
             case Status.Attack:
                 desiredVelocity = Vector3.zero;
                 //if(Leader != null)
-                AttackTarget(currentTarget);
+                if(currentTarget != null)
+                    AttackTarget(currentTarget);
                 break;
             case Status.Chase:
                 Vector3 dir = transform.position - currentTarget.position;
@@ -268,6 +368,9 @@ public class Unit : MonoBehaviour
 
     private void FixedUpdate()
     {
+        if (isObj)
+            return;
+
         if (Leader == null && unitData.team == Team.Player)
         {
             return;
@@ -281,7 +384,7 @@ public class Unit : MonoBehaviour
 
         if (desiredVelocity.sqrMagnitude > 0.01f)
         {
-            navMeshAgent.speed = moveSpeed;
+            navMeshAgent.speed = moveSpeed - DownSpeed;
             navMeshAgent.isStopped = false;
             if(Status != Status.Dead)
                 animator.SetBool("Walk", true);
@@ -312,6 +415,45 @@ public class Unit : MonoBehaviour
 
     }
 
+    public void AddItem(ItemInfo item)
+    {
+        if (inventory.Count >= inventoryMax)
+            return;
+
+        if(inventory.Count == 0)
+        {
+            inventory.Add(new inventorys(item));
+            return;
+        }
+
+        for(int i = 0; i < inventory.Count; i++)
+        {
+            if (inventory[i].ItemInfo == item && inventory[i].counts < item.MaxCpunt)
+            {
+                inventory[i].counts++;
+            } else if(inventory[i].ItemInfo == item && inventory[i].counts >= item.MaxCpunt)
+            {
+                if(i+1 < inventoryMax)
+                {
+                    inventory.Add(new inventorys(item));
+                    break;
+                } else
+                {
+                    Debug.Log("이미 꽉참 ㅅㄱ");
+                    break;
+                }
+            }
+            else if (inventory[i].ItemInfo != item && i + 1 < inventoryMax)
+            {
+                inventory.Add(new inventorys(item));
+                break;
+            } else
+            {
+                Debug.Log("인벤토리가 가득찼습니다.");
+                break;
+            }
+        }
+    }
     void SkillCoolDown()
     {
         for(int i = 0; i < 4; i++)
@@ -447,10 +589,20 @@ public class Unit : MonoBehaviour
 
         if (CurrentHp <= 0)
         {
-            animator.SetTrigger("Death");
             Status = Status.Dead;
+            if (isObj)
+            {
+                Objects objs = GetComponent<Objects>();
+                objs.OnOpen();
+                return true;
+            }
+
+            animator.SetTrigger("Death");
             if (Attacker.unitData.team == Team.Player)
             {
+               
+
+
                 foreach (Unit unit in LeaderManager.instance.units)
                 {
                     if (unit.unitData.team == Team.Player)
@@ -490,7 +642,8 @@ public class Unit : MonoBehaviour
 
         Attacker.FihgtTimer = 0f;
         FihgtTimer = 0f;
-        TookDamageColor();
+        if(!isObj)
+            TookDamageColor();
 
         return false;
 
@@ -517,6 +670,9 @@ public class Unit : MonoBehaviour
         {
             return;
         }
+
+        if (Healer != null)
+            Debug.Log($"{gameObject.name}이가 {Healer.gameObject.name}에게 {heal}만큼 치유 받음");
 
         CurrentHp += heal;
         if (CurrentHp > MaxHp)
@@ -564,7 +720,10 @@ public class Unit : MonoBehaviour
 
     IEnumerator SetMaterial()
     {
-        UnitMaterial.color = Color.red;
+        if (Positon.PostionTimter <= 0)
+            UnitMaterial.color = Color.red;
+        else
+            UnitMaterial.color =  new Color(0.7176f, 0f, 1f);
         yield return new WaitForSeconds(0.25f);
         UnitMaterial.color = Color.white;
     }
@@ -588,6 +747,74 @@ public class Unit : MonoBehaviour
         yield return new WaitForSeconds(time);
 
         lineRenderer.positionCount = 0;
+    }
+
+    public void UseItem()
+    {
+        if (inventory.Count <= 0)
+        {
+            UImanager.instance.Message("인벤토리가 비어있습니다.");
+            return;
+        }
+        ItemInfo items = inventory[0].ItemInfo;
+
+        UImanager.instance.Message($"{items.ItemName}(을)를 사용했습니다.");
+
+        switch(items.itemType)
+        {
+            case ItemType.Hp:
+                Heal(MaxHp * items.Value);
+                break;
+            case ItemType.Mp:
+                MpHeal(MaxMp * items.Value);
+                break;
+            case ItemType.Cool:
+                Cool1sTimer += items.Value;
+                break;
+            case ItemType.Cost:
+                HalfCostTimer += items.Value;
+                break;
+            case ItemType.Resque:
+                ResqueUse();
+                break;
+            
+
+
+        }
+
+        if (inventory[0].counts >= 1)
+        {
+            inventory[0].counts--;
+        } 
+        
+    }
+
+    void ResqueUse()
+    {
+        List<RangeUnitList> units = ResearcResQueTarget(transform.position, 5f);
+
+        ResqueEffect = GameObject.Find("Reffect").GetComponent<ParticleSystem>();
+
+        ResqueEffect.gameObject.transform.position = transform.position;
+
+        ResqueEffect.Play();
+
+        for (int i = 0; i < units.Count; i++)
+        {
+            units[i].unit.ResqueUnit();
+        }
+    }
+
+    public void ResqueUnit()
+    {
+        if(Status != Status.Dead) {
+            return;
+        }
+
+        Status = Status.Idle;
+        CurrentHp = MaxHp;
+        animator.SetTrigger("Resque");
+        
     }
 
      List<RangeUnitList> ResearchSkillTarget(Vector3 pos,float range, bool debug = true)
@@ -616,6 +843,58 @@ public class Unit : MonoBehaviour
         
     }
 
+    List<RangeUnitList> ResearchHealTarget(Vector3 pos, float range, bool debug = true)
+    {
+        Collider[] col = Physics.OverlapSphere(pos, range, LayerMask.GetMask("Unit"));
+
+
+        List<RangeUnitList> targetList = new List<RangeUnitList>();
+        for (int i = 0; i < col.Length; i++)
+        {
+            Unit unit = col[i].GetComponent<Unit>();
+            if (unit == null || unit.CurrentHp <= 0 || unit.unitData.team != unitData.team || unit.CurrentHp >= unit.MaxHp)
+            {
+                continue;
+            }
+
+
+            float distance = Vector3.Distance(pos, unit.transform.position);
+            targetList.Add(new RangeUnitList(unit, distance));
+        }
+
+        List<RangeUnitList> sortedList = targetList.OrderBy(x => x.Rnage).ToList();
+
+
+        return sortedList;
+
+    }
+
+    List<RangeUnitList> ResearcResQueTarget(Vector3 pos, float range, bool debug = true)
+    {
+        Collider[] col = Physics.OverlapSphere(pos, range, LayerMask.GetMask("Unit"));
+
+
+        List<RangeUnitList> targetList = new List<RangeUnitList>();
+        for (int i = 0; i < col.Length; i++)
+        {
+            Unit unit = col[i].GetComponent<Unit>();
+            if (unit == null || unit.CurrentHp > 0 || unit.unitData.team != unitData.team || unit.Status != Status.Dead)
+            {
+                continue;
+            }
+
+
+            float distance = Vector3.Distance(pos, unit.transform.position);
+            targetList.Add(new RangeUnitList(unit, distance));
+        }
+
+        List<RangeUnitList> sortedList = targetList.OrderBy(x => x.Rnage).ToList();
+
+
+        return sortedList;
+
+    }
+
 
     public void UseSkill(int num)
     {
@@ -632,7 +911,14 @@ public class Unit : MonoBehaviour
             return;
         }
 
-        if(CurrentMp < unitData.HaveSkill[num].UseMp[SkillLv[num] - 1])
+        float skillMp = unitData.HaveSkill[num].UseMp[SkillLv[num] - 1];
+
+        if (HalfCostTimer > 0)
+        {
+            Debug.Log("스킬 코스트 절반");
+            skillMp *= 0.5f;
+        }
+        if (CurrentMp < (int)skillMp)
         {
             UImanager.instance.Message("마나가 부족합니다.");
             return;
@@ -644,7 +930,7 @@ public class Unit : MonoBehaviour
             return;
         }
 
-        switch(unitData.playerType)
+        switch (unitData.playerType)
         {
             case PlayerType.Mele:
                 switch (num)
@@ -680,6 +966,39 @@ public class Unit : MonoBehaviour
                         break;
                 }
                 break;
+            case PlayerType.Magic:
+                switch (num)
+                {
+                    case 0:
+                        StartCoroutine(매직미사일(num, unitData.HaveSkill[num]));
+                        break;
+                    case 1:
+                        StartCoroutine(근원의힘(num, unitData.HaveSkill[num]));
+                        break;
+                    case 2:
+                        if (SkillLv[num] <= 2)
+                        {
+                            if(CurrentHp >= MaxHp)
+                            {
+                                UImanager.instance.Message("이미 체력이 가득 차 있습니다.");
+                                return;
+                            }
+                        } else
+                        {
+                            List<RangeUnitList> HealTarget = ResearchHealTarget(transform.position, 3f);
+                            if(HealTarget.Count <= 0)
+                            {
+                                UImanager.instance.Message("치유할 대상이 존재하지 않습니다.");
+                                return;
+                            }
+                        }
+                        StartCoroutine(회복(num, unitData.HaveSkill[num]));
+                        break;
+                    case 3:
+                        StartCoroutine(저주(num, unitData.HaveSkill[num]));
+                        break;
+                }
+                break;
         }
 
     }
@@ -690,11 +1009,41 @@ public class Unit : MonoBehaviour
         debuff = Debuff.Stun;
     }
 
+    public void SetPostion(float timer, float damage, float speedDown, Unit unit)
+    {
+        Debug.Log("독 상태");
+        if(Positon.PostionTimter < timer)
+        {
+            Positon positon = new Positon(timer, damage, speedDown, unit);
+            Positon = positon;
+            StartCoroutine(SpeedDownEnd(timer, moveSpeed * speedDown));
+        }
+    }
+
+    IEnumerator SpeedDownEnd(float timer, float speedValue)
+    {
+        DownSpeed += speedValue;
+        yield return new WaitForSeconds(timer);
+        DownSpeed -= speedValue;
+        if (DownSpeed < 0)
+            DownSpeed = 0;
+    }
+
     public IEnumerator 참격(int num, SKillInfo skill)
     {
         SkillUseing = true;
-        skillCooltime[num] = skill.CoolTime[SkillLv[num] - 1];
-        CurrentMp -= skill.UseMp[SkillLv[num] - 1];
+        float cooltime = skill.CoolTime[SkillLv[num] - 1];
+        if (Cool1sTimer > 0)
+            cooltime = 1;
+
+        skillCooltime[num] = cooltime;
+
+        float skillMp = unitData.HaveSkill[num].UseMp[SkillLv[num] - 1];
+
+        if (HalfCostTimer > 0)
+            skillMp *= 0.5f;
+
+        CurrentMp -= skillMp;
 
 
         animator.SetTrigger("Skill" + (num + 1));
@@ -720,8 +1069,18 @@ public class Unit : MonoBehaviour
         }
 
         SkillUseing = true;
-        skillCooltime[num] = skill.CoolTime[SkillLv[num]-1];
-        CurrentMp -= skill.UseMp[SkillLv[num] - 1];
+        float cooltime = skill.CoolTime[SkillLv[num] - 1];
+        if (Cool1sTimer > 0)
+            cooltime = 1;
+
+        skillCooltime[num] = cooltime;
+
+        float skillMp = unitData.HaveSkill[num].UseMp[SkillLv[num] - 1];
+
+        if (HalfCostTimer > 0)
+            skillMp *= 0.5f;
+
+        CurrentMp -= skillMp;
 
 
         animator.SetTrigger("Skill" + (num + 1));
@@ -751,8 +1110,18 @@ public class Unit : MonoBehaviour
     public IEnumerator 파쇄격(int num, SKillInfo skill)
     {
         SkillUseing = true;
-        skillCooltime[num] = skill.CoolTime[SkillLv[num] - 1];
-        CurrentMp -= skill.UseMp[SkillLv[num] - 1];
+        float cooltime = skill.CoolTime[SkillLv[num] - 1];
+        if (Cool1sTimer > 0)
+            cooltime = 1;
+
+        skillCooltime[num] = cooltime;
+
+        float skillMp = unitData.HaveSkill[num].UseMp[SkillLv[num] - 1];
+
+        if (HalfCostTimer > 0)
+            skillMp *= 0.5f;
+
+        CurrentMp -= skillMp;
 
 
         animator.SetTrigger("Skill" + (num - 1));
@@ -784,8 +1153,19 @@ public class Unit : MonoBehaviour
     public IEnumerator 격파(int num, SKillInfo skill)
     {
         SkillUseing = true;
-        skillCooltime[num] = skill.CoolTime[SkillLv[num] - 1];
-        CurrentMp -= skill.UseMp[SkillLv[num] - 1];
+
+        float cooltime = skill.CoolTime[SkillLv[num] - 1];
+        if (Cool1sTimer > 0)
+            cooltime = 1;
+
+        skillCooltime[num] = cooltime;
+
+        float skillMp = unitData.HaveSkill[num].UseMp[SkillLv[num] - 1];
+
+        if (HalfCostTimer > 0)
+            skillMp *= 0.5f;
+
+        CurrentMp -= skillMp;
 
 
         animator.SetTrigger("Skill" + (num + 1));
@@ -822,8 +1202,18 @@ public class Unit : MonoBehaviour
     public IEnumerator 퀵샷(int num, SKillInfo skill)
     {
         SkillUseing = true;
-        skillCooltime[num] = skill.CoolTime[SkillLv[num] - 1];
-        CurrentMp -= skill.UseMp[SkillLv[num] - 1];
+        float cooltime = skill.CoolTime[SkillLv[num] - 1];
+        if (Cool1sTimer > 0)
+            cooltime = 1;
+
+        skillCooltime[num] = cooltime;
+
+        float skillMp = unitData.HaveSkill[num].UseMp[SkillLv[num] - 1];
+
+        if (HalfCostTimer > 0)
+            skillMp *= 0.5f;
+
+        CurrentMp -= skillMp;
 
 
         animator.SetTrigger("Skill" + (num + 1));
@@ -852,12 +1242,27 @@ public class Unit : MonoBehaviour
         }
 
         SkillUseing = true;
-        skillCooltime[num] = skill.CoolTime[SkillLv[num] - 1];
-        CurrentMp -= skill.UseMp[SkillLv[num] - 1];
+        float cooltime = skill.CoolTime[SkillLv[num] - 1];
+        if (Cool1sTimer > 0)
+            cooltime = 1;
+
+        skillCooltime[num] = cooltime;
+
+        float skillMp = unitData.HaveSkill[num].UseMp[SkillLv[num] - 1];
+
+        if (HalfCostTimer > 0)
+            skillMp *= 0.5f;
+
+        CurrentMp -= skillMp;
 
 
         animator.SetTrigger("Skill" + (num + 1));
         List<RangeUnitList> unitLists = ResearchSkillTarget(transform.position, AttackRange);
+
+        ParticleSystem particle = SkillEffect[2].GetComponent<ParticleSystem>();
+
+        particle.gameObject.transform.position = transform.position + new Vector3(0, 0, 0);
+        particle.Play();
 
         Debug.Log(unitLists.Count);
         if (unitLists.Count > 0)
@@ -891,8 +1296,18 @@ public class Unit : MonoBehaviour
         }
 
         SkillUseing = true;
-        skillCooltime[num] = skill.CoolTime[SkillLv[num] - 1];
-        CurrentMp -= skill.UseMp[SkillLv[num] - 1];
+        float cooltime = skill.CoolTime[SkillLv[num] - 1];
+        if (Cool1sTimer > 0)
+            cooltime = 1;
+
+        skillCooltime[num] = cooltime;
+
+        float skillMp = unitData.HaveSkill[num].UseMp[SkillLv[num] - 1];
+
+        if (HalfCostTimer > 0)
+            skillMp *= 0.5f;
+
+        CurrentMp -= skillMp;
 
 
         animator.SetTrigger("Skill" + (num + 1));
@@ -932,8 +1347,18 @@ public class Unit : MonoBehaviour
         }
 
         SkillUseing = true;
-        skillCooltime[num] = skill.CoolTime[SkillLv[num] - 1];
-        CurrentMp -= skill.UseMp[SkillLv[num] - 1];
+        float cooltime = skill.CoolTime[SkillLv[num] - 1];
+        if (Cool1sTimer > 0)
+            cooltime = 1;
+
+        skillCooltime[num] = cooltime;
+
+        float skillMp = unitData.HaveSkill[num].UseMp[SkillLv[num] - 1];
+
+        if (HalfCostTimer > 0)
+            skillMp *= 0.5f;
+
+        CurrentMp -= skillMp;
 
 
         animator.SetTrigger("Skill2");
@@ -978,6 +1403,171 @@ public class Unit : MonoBehaviour
         yield return new WaitForSeconds(0.1f);
         SkillUseing = false;
     }
+
+    public IEnumerator 매직미사일(int num, SKillInfo skill)
+    {
+        SkillUseing = true;
+        float cooltime = skill.CoolTime[SkillLv[num] - 1];
+        if (Cool1sTimer > 0)
+            cooltime = 1;
+
+        skillCooltime[num] = cooltime;
+
+        float skillMp = unitData.HaveSkill[num].UseMp[SkillLv[num] - 1];
+
+        if (HalfCostTimer > 0)
+            skillMp *= 0.5f;
+
+        CurrentMp -= skillMp;
+
+
+        animator.SetTrigger("Skill" + (num + 1));
+        ParticleSystem particle = SkillEffect[1].GetComponent<ParticleSystem>();
+
+        Unit unit = currentTarget.GetComponent<Unit>();
+
+        particle.gameObject.transform.position = unit.transform.position + new Vector3(0, 1, 0);
+        particle.Play();
+
+        unit.Damage(CurrentAttack() * skill.Attack_Value[SkillLv[num] - 1], this, true);
+
+        List<RangeUnitList> unitLists = ResearchSkillTarget(unit.transform.position, 3f);
+        if (unitLists.Count > 0)
+        {
+            for (int i = 0; i < unitLists.Count; i++)
+            {
+                if (unitLists[i].unit != unit)
+                    unitLists[i].unit.Damage((CurrentAttack() * skill.Attack_Value[SkillLv[num] - 1]), this, true);
+
+            }
+        }
+
+
+        yield return new WaitForSeconds(0.1f);
+        SkillUseing = false;
+    }
+
+    public IEnumerator 근원의힘(int num, SKillInfo skill)
+    {
+        SkillUseing = true;
+        float cooltime = skill.CoolTime[SkillLv[num] - 1];
+        if (Cool1sTimer > 0)
+            cooltime = 1;
+
+        skillCooltime[num] = cooltime;
+
+        float skillMp = unitData.HaveSkill[num].UseMp[SkillLv[num] - 1];
+
+        if (HalfCostTimer > 0)
+            skillMp *= 0.5f;
+
+        CurrentMp -= skillMp;
+
+
+        animator.SetTrigger("Skill" + (num + 1));
+        Unit unit = currentTarget.GetComponent<Unit>();
+
+        unit.Damage(CurrentAttack() * skill.Attack_Value[SkillLv[num] - 1], this, true);
+
+        List<RangeUnitList> unitLists = ResearchSkillTarget(unit.transform.position, 3f);
+        staticPos.Clear();
+
+        staticPos.Add(unit.transform);
+   
+
+        if (unitLists.Count > 0)
+        {
+            for (int i = 0; i < unitLists.Count; i++)
+            {
+                if (unitLists[i].unit != unit && i <= skill.Plus_Skill2_Value[SkillLv[num] - 1])
+                {
+                    staticPos.Add(unitLists[i].unit.transform);
+                    unitLists[i].unit.Damage((CurrentAttack() * skill.Attack_Value[SkillLv[num] - 1]), this, true);
+
+                }
+
+            }
+        }
+
+
+        yield return new WaitForSeconds(0.1f);
+        SkillUseing = false;
+        yield return new WaitForSeconds(0.15f);
+        staticPos.Clear();
+    }
+
+    public IEnumerator 회복(int num, SKillInfo skill)
+    {
+        SkillUseing = true;
+        float cooltime = skill.CoolTime[SkillLv[num] - 1];
+        if (Cool1sTimer > 0)
+            cooltime = 1;
+
+        skillCooltime[num] = cooltime;
+
+        float skillMp = unitData.HaveSkill[num].UseMp[SkillLv[num] - 1];
+
+        if (HalfCostTimer > 0)
+            skillMp *= 0.5f;
+
+        CurrentMp -= skillMp;
+
+
+        animator.SetTrigger("Skill" + (num + 1));
+        if (SkillLv[num] <= 2)
+        {
+            Heal(CurrentAttack() * skill.Attack_Value[SkillLv[num] - 1], this);
+        } else
+        {
+            List<RangeUnitList> HealTarget = ResearchHealTarget(transform.position, 3f);
+            Unit target = null;
+            for(int i = 0; i < HealTarget.Count; i++)
+            {
+                if (HealTarget[i].unit == this && target != this)
+                {
+                    target = HealTarget[i].unit;
+                } else if(target != this && target == null)
+                {
+                    target = HealTarget[i].unit;
+                }
+            }
+            target.Heal(skill.Attack_Value[SkillLv[num] - 1] * CurrentAttack(), this);
+           
+        }
+
+      
+
+
+        yield return new WaitForSeconds(0.1f);
+        SkillUseing = false;
+    }
+
+    public IEnumerator 저주(int num, SKillInfo skill)
+    {
+        SkillUseing = true;
+        float cooltime = skill.CoolTime[SkillLv[num] - 1];
+        if (Cool1sTimer > 0)
+            cooltime = 1;
+
+        skillCooltime[num] = cooltime;
+
+        float skillMp = unitData.HaveSkill[num].UseMp[SkillLv[num] - 1];
+
+        if (HalfCostTimer > 0)
+            skillMp *= 0.5f;
+
+        CurrentMp -= skillMp;
+
+
+        animator.SetTrigger("Skill" + (num + 1));
+        Unit unit = currentTarget.GetComponent<Unit>();
+
+        unit.SetPostion(skill.Plus_Skill_Value[SkillLv[num] - 1], skill.Attack_Value[SkillLv[num] - 1], skill.Plus_Skill2_Value[SkillLv[num] - 1], this);
+
+        yield return new WaitForSeconds(0.1f);
+        SkillUseing = false;
+    }
+
 
 
 

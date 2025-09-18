@@ -18,6 +18,9 @@ public class LeaderController : MonoBehaviour
 
     private void Update()
     {
+        if (unit.Status == Status.Dead)
+            return;
+
         Move();
         Rotation();
 
@@ -40,6 +43,14 @@ public class LeaderController : MonoBehaviour
             unit.UseSkill(3);
 
         }
+
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            unit.UseItem();
+        }
+
+        if (unit.inventory.Count > 0 && unit.inventory[0].counts == 0)
+            unit.inventory.RemoveAt(0);
     }
 
     void Move()

@@ -28,7 +28,10 @@ public enum EnemyType
     Range3,
     Boos1,
     Boss2,
-    Boss3
+    Boss3,
+    Chest,
+    GoldChest,
+    MissonObj,
 }
 
 

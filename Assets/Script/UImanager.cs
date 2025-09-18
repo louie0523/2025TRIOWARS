@@ -24,6 +24,7 @@ public class UImanager : MonoBehaviour
     public Slider ExpSlider;
     public GameObject SkillGrid;
     public Text LvText;
+    public GameObject Itemparent;
 
 
     private Coroutine MessageCorutine;
@@ -58,6 +59,10 @@ public class UImanager : MonoBehaviour
             LvText.text = $"Lv.{LeaderManager.instance.currentLeaderUnit.Lv}";
 
             SkillUISet();
+
+            ItemUiSet();
+
+
         }
     }
 
@@ -192,8 +197,33 @@ public class UImanager : MonoBehaviour
         }
     }
 
+    public void ItemUiSet()
+    {
+        Unit unit = LeaderManager.instance.currentLeaderUnit;
 
-    
+        for (int i = 0; i < 4; i++)
+        {
+            GameObject skill = Itemparent.transform.GetChild(i).gameObject;
+            Image icon = skill.transform.GetChild(0).GetComponent<Image>();
+            Text cost = skill.transform.GetChild(1).GetComponent<Text>();
+            if (unit.inventory.Count > i)
+            {
+                icon.color = unit.inventory[i].ItemInfo.ItemColor;
+                icon.color = new Color(icon.color.r, icon.color.g, icon.color.b, 1f);
+                icon.sprite = unit.inventory[i].ItemInfo.ItemIcon;
+                cost.text = unit.inventory[i].counts.ToString();
+            }
+            else
+            {
+                icon.color = new Color(icon.color.r, icon.color.g, icon.color.b, 0f);
+                cost.text = "";
+            }
+
+        }
+    }
+
+
+
 
 
 }

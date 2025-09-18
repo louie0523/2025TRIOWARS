@@ -20,7 +20,7 @@ public class EnemyGroup : MonoBehaviour
 
     private void Update()
     {
-        if(transform.childCount == 0 && !AllDie)
+        if(transform.childCount == 1 && !AllDie)
         {
             AllDie = true;
             StartCoroutine(Respawn());

@@ -11,7 +11,7 @@ public class LeaderManager : MonoBehaviour
     public List<Unit> units = new List<Unit>();
     public Unit currentLeaderUnit;
     public int currentLeaderIndex;
-    public CinemachineVirtualCamera cam;
+    public int defaultLeaderIndex;
     public List<Vector3> UnitOffset = new List<Vector3>();
 
     private void Awake()
@@ -90,10 +90,13 @@ public class LeaderManager : MonoBehaviour
                 units[i].LeaderOffset = Vector3.zero;
             } else
             {
-                units[i].Leader = currentLeaderUnit.transform;
-                units[i].navMeshAgent.isStopped = false;
-                units[i].LeaderOffset = UnitOffset[count];
-                count++;
+                if (!units[i].isObj)
+                {
+                    units[i].Leader = currentLeaderUnit.transform;
+                    units[i].navMeshAgent.isStopped = false;
+                    units[i].LeaderOffset = UnitOffset[count];
+                    count++;
+                }
             }
         }
         List<Unit> EnemyUnit = GameManager.instance.UnitsGet(1);
