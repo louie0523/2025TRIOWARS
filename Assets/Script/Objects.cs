@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using static UnityEditor.Progress;
+
 
 public class Objects : MonoBehaviour
 {
@@ -11,27 +11,44 @@ public class Objects : MonoBehaviour
     public Vector3 Rotate;
     public bool isOepn = false;
     public int DropRange = 100;
+    public bool trap;
 
 
 
     private void Start()
     {
-        unit = GetComponent<Unit>();
+        if(OpenTheKill)
+            unit = GetComponent<Unit>();
     }
 
-
-    private void OnCollisionEnter(Collision collision)
+    private void OnTriggerEnter(Collider other)
     {
-        if (collision.gameObject.layer == LayerMask.NameToLayer("Unit") && !OpenTheKill)
+        if (other.gameObject.layer == LayerMask.NameToLayer("Unit") && !OpenTheKill)
         {
-            Unit unit = collision.gameObject.GetComponent<Unit>();
-            if (unit == LeaderManager.instance.currentLeaderUnit)
+            Unit unit = other.gameObject.GetComponent<Unit>();
+
+            if (unit.unitData.team == Team.Player)
             {
                 Debug.Log("붙어서 상자 오픈");
+
+                if (trap)
+                {
+                    List<RangeUnitList> units = unit.ResearchTrapTarget(transform.position, 5f, false);
+                    Debug.Log(units.Count);
+                    for (int i = 0; i < units.Count; i++)
+                    {
+                        units[i].unit.Damage(DropRange, null);
+                    }
+                    ParticleSystem particleSystem = GameObject.Find("TrapEffect").GetComponent<ParticleSystem>();
+                    particleSystem.transform.position = transform.position;
+                    particleSystem.Play();
+                }
+
                 OnOpen();
             }
         }
     }
+
 
 
     public void OnOpen()
@@ -42,19 +59,39 @@ public class Objects : MonoBehaviour
 
 
         isOepn = true;
+        if(DropItems.Count > 0)
+        {
+            int dropRan = Random.Range(1, 101);
 
-        int rand = Random.Range(0, DropItems.Count);
+            if(dropRan <= DropRange)
+            {
+                int rand = Random.Range(0, DropItems.Count);
 
-        float x = Random.Range(-1.5f, 1.5f);
-        float z = Random.Range(-1.5f, 1.5f);
+                float x = Random.Range(-1.5f, 1.5f);
+                float z = Random.Range(-1.5f, 1.5f);
 
-        Quaternion quaternion = Quaternion.Euler(Rotate)
-            ;
-        Instantiate(DropItems[rand], transform.position, quaternion);
+                if(rand <= 5)
+                {
+                    Quaternion quaternion = Quaternion.Euler(Rotate);
+                    Instantiate(DropItems[rand], transform.position, quaternion);
+                } else if(rand == 8)
+                {
+                    Instantiate(DropItems[rand], transform.position + new Vector3(0, 1, 0), Quaternion.identity);
+                } else
+                {
+                    Instantiate(DropItems[rand], transform.position, Quaternion.identity);
+                }
+            }
+
+        }
+
 
         gameObject.SetActive(false);
 
     }
+
+
+    
 
 
 }

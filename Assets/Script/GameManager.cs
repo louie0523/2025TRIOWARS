@@ -1,12 +1,43 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using UnityEngine;
+
+
+[System.Serializable]
+public class Mission
+{
+    public List<int> NeedMission = new List<int>()
+    {
+        0, 0, 0, 0
+    };
+
+
+
+    public Mission(int e1, int e2, int e3, int ob)
+    {
+        NeedMission[0] = e1;
+        NeedMission[1] = e2;
+        NeedMission[2] = e3;
+        NeedMission[3] = ob;
+    }
+}
+
+[System.Serializable]
+public class BossSpawn
+{
+    public GameObject Boss;
+    public List<GameObject> subEnemys = new List<GameObject>();
+}
 
 public class GameManager : MonoBehaviour
 {
     public static GameManager instance;
 
 
+    public Mission mission;
+    public bool MissonClear = false;
+    public BossSpawn bossSpawn;
     public List<Unit> AllUnits = new List<Unit>();
     public List<int> PublicSkillLv = new List<int>()
     {
@@ -94,6 +125,36 @@ public class GameManager : MonoBehaviour
         UImanager.instance.SkillUI.SetActive(false);
         UImanager.instance.PlayerUi.SetActive(true);
         Time.timeScale = 1f;
+    }
+
+    public void MissionCheck()
+    {
+        if (MissonClear)
+            return;
+
+        int result = 0;
+        for(int i = 0; i < mission.NeedMission.Count; i++)
+        {
+            result += mission.NeedMission[i];
+        }
+
+        if(result == 0)
+        {
+            MissonClear = true;
+            BossTime();
+        }
+    }
+
+    public void BossTime()
+    {
+        Instantiate(bossSpawn.Boss, new Vector3(0, 0, 0), Quaternion.identity);
+
+        foreach(GameObject obj in bossSpawn.subEnemys)
+        {
+            float randX = Random.Range(-3, 4);
+            float randZ = Random.Range(-2, 3);
+            Instantiate(obj, Vector3.zero + new Vector3(randX, 0, randZ), Quaternion.identity);
+        }
     }
 
     public void PublicSkillStatusUp(int num)

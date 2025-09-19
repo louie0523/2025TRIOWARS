@@ -25,6 +25,10 @@ public class UImanager : MonoBehaviour
     public GameObject SkillGrid;
     public Text LvText;
     public GameObject Itemparent;
+    public GameObject Coo1s;
+    public GameObject HalfCost;
+    public GameObject MissionObj;
+    public GameObject CompleteObj;
 
 
     private Coroutine MessageCorutine;
@@ -62,6 +66,12 @@ public class UImanager : MonoBehaviour
 
             ItemUiSet();
 
+            BuffUISet();
+
+            MissionUISet();
+
+
+            CompleteObj.SetActive(GameManager.instance.MissonClear);
 
         }
     }
@@ -222,7 +232,55 @@ public class UImanager : MonoBehaviour
         }
     }
 
+    public void MissionUISet()
+    {
 
+        for (int i = 0; i < 4; i++)
+        {
+            GameObject skill = MissionObj.transform.GetChild(i).gameObject;
+            Image icon = skill.transform.GetComponent<Image>();
+            Text cost = skill.transform.GetChild(0).GetComponent<Text>();
+            if (GameManager.instance.mission.NeedMission[i] > 0)
+            {
+                icon.color = new Color(icon.color.r, icon.color.g, icon.color.b, 1f);
+                cost.text = GameManager.instance.mission.NeedMission[i].ToString();
+            }
+            else
+            {
+                icon.color = new Color(icon.color.r, icon.color.g, icon.color.b, 0f);
+                cost.text = "";
+            }
+
+        }
+    }
+
+    void BuffUISet()
+    {
+        if(LeaderManager.instance.currentLeaderUnit.Cool1sTimer > 0)
+        {
+            Coo1s.SetActive(true);
+            Text tiem = Coo1s.transform.GetChild(0).GetComponent<Text>();
+
+            tiem.text = LeaderManager.instance.currentLeaderUnit.Cool1sTimer.ToString("F1");
+        } else
+        {
+            Coo1s.SetActive(false);
+        }
+
+        if (LeaderManager.instance.currentLeaderUnit.HalfCostTimer > 0)
+        {
+            HalfCost.SetActive(true);
+            Text tiem = HalfCost.transform.GetChild(0).GetComponent<Text>();
+
+            tiem.text = LeaderManager.instance.currentLeaderUnit.HalfCostTimer.ToString("F1");
+        }
+        else
+        {
+            HalfCost.SetActive(false);
+        }
+
+
+    }
 
 
 

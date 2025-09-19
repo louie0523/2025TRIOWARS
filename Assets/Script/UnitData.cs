@@ -32,6 +32,8 @@ public enum EnemyType
     Chest,
     GoldChest,
     MissonObj,
+    BubiTrap,
+    JangAe,
 }
 
 

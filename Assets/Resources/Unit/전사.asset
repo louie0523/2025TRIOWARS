@@ -18,7 +18,7 @@ MonoBehaviour:
   MaxHp: 100
   MaxMp: 50
   DefulatAttack: 20
-  Range: 4
+  Range: 2
   AttackSpeed: 1
   Critical_Rate: 0.1
   Critical_Value: 2

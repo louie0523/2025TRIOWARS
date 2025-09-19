@@ -29,7 +29,6 @@ public class Bullet : MonoBehaviour
             if(vic.unitData.team != Team.Player)
             {
                 vic.Damage((unit.CurrentAttack() * unit.unitData.HaveSkill[1].Attack_Value[unit.SkillLv[1]-1]), unit, true);
-                Destroy(gameObject);
             }
         }
     }

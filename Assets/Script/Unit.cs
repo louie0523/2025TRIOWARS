@@ -103,6 +103,11 @@ public class Unit : MonoBehaviour
     };
     public List<GameObject> SkillEffect = new List<GameObject>();
     [Header("유닛 정보")]
+    public int Boss = 0;
+    public List<float> BossSkillTimer = new List<float>();
+    public List<float> BossSkillAttackValue = new List<float>();
+    public List<float> BossSkillUseTimeMin = new List<float>();
+    public List<float> BossSkillUseTimeMax = new List<float>();
     public Transform Leader;
     public Transform currentTarget;
     public Vector3 desiredVelocity;
@@ -235,7 +240,24 @@ public class Unit : MonoBehaviour
 
         if (Status == Status.Dead)
         {
+            CurrentHp = 0;
             return;
+        }
+
+        if(Boss >= 1)
+        {
+
+            for(int i = 0; i < BossSkillTimer.Count; i++)
+            {
+                if (BossSkillTimer[i] > 0)
+                {
+                    BossSkillTimer[i] -= Time.deltaTime;
+                    if (BossSkillTimer[i] <= 0)
+                    {
+                        BossUseSkill(i);
+                    }
+                }
+            }
         }
 
         if(Positon.PostionTimter > 0 && unitData.team == Team.Enemy)
@@ -412,6 +434,18 @@ public class Unit : MonoBehaviour
         moveSpeed = unitData.Speed;
         inventoryMax = unitData.InventoryMax;
         attackRateTime = unitData.AttackSpeed;
+        switch (unitData.enemyType)
+        {
+            case EnemyType.Boos1:
+                Boss = 1;
+                break;
+            case EnemyType.Boss2:
+                Boss = 2;
+                break;
+            case EnemyType.Boss3:
+                Boss = 3;
+                break;
+        }
 
     }
 
@@ -534,15 +568,26 @@ public class Unit : MonoBehaviour
             return;
         }
 
+        if (SkillUseing)
+            return;
 
-        unit.Damage(CurrentAttack(), this);
+
 
         if(AttackRange >= 4)
             LineRednerAttack(unit.transform);
 
         animator.SetTrigger("Attack");
 
+        StartCoroutine(PattackDamage(unit));
+    
         attackTimer = attackRateTime / AttackSpped;
+    }
+
+    IEnumerator PattackDamage(Unit unit)
+    {
+        yield return new WaitForSeconds(0.25f);
+
+        unit.Damage(CurrentAttack(), this);
     }
 
 
@@ -560,7 +605,7 @@ public class Unit : MonoBehaviour
         }
 
 
-        if(Attacker.Critical_Rate > 0)
+        if (Attacker != null && Attacker.Critical_Rate > 0)
         {
             int rand = Random.Range(1, 101);
             if(((int)Attacker.Critical_Rate * 100) > rand)
@@ -570,7 +615,7 @@ public class Unit : MonoBehaviour
             }
         }
 
-        if (Attacker.unitData.team == Team.Player)
+        if ( Attacker != null && Attacker.unitData.team == Team.Player)
         {
             float giveExp = unitData.KillExp * (Attacker.CurrentAttack() / MaxHp);
             if (damage > CurrentHp)
@@ -582,13 +627,14 @@ public class Unit : MonoBehaviour
 
         CurrentHp -= damage;
 
-        if (skillDamage)
+        if (Attacker != null && skillDamage)
             Debug.Log($"{gameObject.name}가 {Attacker.gameObject.name}에게 {damage}의 피해를 입었습니다!");
 
 
 
         if (CurrentHp <= 0)
         {
+            CurrentHp = 0;
             Status = Status.Dead;
             if (isObj)
             {
@@ -596,13 +642,11 @@ public class Unit : MonoBehaviour
                 objs.OnOpen();
                 return true;
             }
-
+            if(unitData.team == Team.Player)
+                animator.SetBool("Die", true);
             animator.SetTrigger("Death");
-            if (Attacker.unitData.team == Team.Player)
+            if (Attacker != null && Attacker.unitData.team == Team.Player)
             {
-               
-
-
                 foreach (Unit unit in LeaderManager.instance.units)
                 {
                     if (unit.unitData.team == Team.Player)
@@ -611,7 +655,34 @@ public class Unit : MonoBehaviour
                         unit.ExpCheck();
                     }
                 }
-            } else
+
+                int Mnum = -1;
+                switch (unitData.enemyType)
+                {
+                    case EnemyType.Mele1:
+                    case EnemyType.Range1:
+                        Mnum = 0;
+                        break;
+                    case EnemyType.Mele2:
+                    case EnemyType.Range2:
+                        Mnum = 1;
+                        break;
+                    case EnemyType.Mele3:
+                    case EnemyType.Range3:
+                        Mnum = 2;
+                        break;
+                    case EnemyType.MissonObj:
+                        Mnum = 3;
+                        break;
+                }
+
+                if (Mnum >= 0)
+                {
+                    Debug.Log($"{Mnum + 1}단계 몬스터 처치");
+                    GameManager.instance.mission.NeedMission[Mnum]--;
+                    GameManager.instance.MissionCheck();
+                }
+            } else 
             {
                 if (LeaderManager.instance.currentLeaderUnit == this)
                 {
@@ -639,8 +710,8 @@ public class Unit : MonoBehaviour
             return true;
         }
 
-
-        Attacker.FihgtTimer = 0f;
+        if(Attacker != null)
+            Attacker.FihgtTimer = 0f;
         FihgtTimer = 0f;
         if(!isObj)
             TookDamageColor();
@@ -811,9 +882,19 @@ public class Unit : MonoBehaviour
             return;
         }
 
+
         Status = Status.Idle;
         CurrentHp = MaxHp;
+        animator.SetBool("Die", false);
         animator.SetTrigger("Resque");
+
+        LeaderManager.instance.SetResuqePlayerUnitList();
+
+        // 원래의 리더가 살아났으면 다시 리더 변경
+        if(LeaderManager.instance.defaultLeaderIndex != LeaderManager.instance.currentLeaderIndex)
+        {
+            LeaderManager.instance.ChangeLeader(LeaderManager.instance.defaultLeaderIndex);
+        }
         
     }
 
@@ -836,14 +917,18 @@ public class Unit : MonoBehaviour
             targetList.Add(new RangeUnitList(unit, distance));
         }
 
-        List<RangeUnitList> sortedList = targetList.OrderBy(x => x.Rnage).ToList();
+        List<RangeUnitList> sortedList = new List<RangeUnitList>();
+        if (unitData.team == Team.Enemy)
+            sortedList = targetList.OrderBy(x => x.Rnage).GroupBy(x => x.unit.unitData.playerType).Select(g => g.First()).ToList();
+        else
+            sortedList = targetList.OrderBy(x => x.Rnage).ToList();
 
 
         return sortedList;
         
     }
 
-    List<RangeUnitList> ResearchHealTarget(Vector3 pos, float range, bool debug = true)
+    public List<RangeUnitList> ResearchHealTarget(Vector3 pos, float range, bool debug = true)
     {
         Collider[] col = Physics.OverlapSphere(pos, range, LayerMask.GetMask("Unit"));
 
@@ -864,7 +949,34 @@ public class Unit : MonoBehaviour
 
         List<RangeUnitList> sortedList = targetList.OrderBy(x => x.Rnage).ToList();
 
+        return sortedList;
 
+    }
+
+    public List<RangeUnitList> ResearchTrapTarget(Vector3 pos, float range, bool debug = true)
+    {
+        Collider[] col = Physics.OverlapSphere(pos, range, LayerMask.GetMask("Unit"));
+
+
+        List<RangeUnitList> targetList = new List<RangeUnitList>();
+        for (int i = 0; i < col.Length; i++)
+        {
+            Unit unit = col[i].GetComponent<Unit>();
+            if (unit == null || unit.CurrentHp <= 0 || unit.unitData.team != unitData.team )
+            {
+                continue;
+            }
+
+            
+
+            float distance = Vector3.Distance(pos, unit.transform.position);
+            Debug.Log(unit.gameObject.name);
+            targetList.Add(new RangeUnitList(unit, distance));
+        }
+
+        List<RangeUnitList> sortedList = targetList.OrderBy(x => x.Rnage).GroupBy(x => x.unit.unitData.playerType).Select(g => g.First()).ToList();
+
+       
         return sortedList;
 
     }
@@ -885,11 +997,12 @@ public class Unit : MonoBehaviour
 
 
             float distance = Vector3.Distance(pos, unit.transform.position);
+            Debug.Log(unit.gameObject.name);
             targetList.Add(new RangeUnitList(unit, distance));
         }
 
         List<RangeUnitList> sortedList = targetList.OrderBy(x => x.Rnage).ToList();
-
+        Debug.Log(sortedList.Count);
 
         return sortedList;
 
@@ -1002,6 +1115,47 @@ public class Unit : MonoBehaviour
         }
 
     }
+
+    public void BossUseSkill(int num)
+    {
+        switch(Boss)
+        {
+            case 1:
+                StartCoroutine(데스나이트킹가르기(0));
+                break;
+            case 2:
+                break;
+        }
+    }
+
+    public IEnumerator 데스나이트킹가르기(int num)
+    {
+
+        float skillCool = Random.Range(BossSkillUseTimeMin[num], BossSkillUseTimeMax[num]);
+        BossSkillTimer[num] = skillCool;
+
+        SkillUseing = true;
+        animator.SetTrigger("Skill" + 1);
+
+        yield return new WaitForSeconds(1.35f);
+        List<RangeUnitList> unitLists = ResearchSkillTarget(transform.position + new Vector3(0, 1, 2), 5f);
+
+        Debug.Log(unitLists.Count);
+        if (unitLists.Count > 0)
+        {
+            for (int i = 0; i < unitLists.Count; i++)
+            {
+                unitLists[i].unit.Damage((CurrentAttack() * BossSkillAttackValue[num]), this, true);
+            }
+        }
+        else
+        {
+            Debug.Log("타겟 못찾음");
+        }
+        yield return new WaitForSeconds(1f);
+        SkillUseing = false;
+    }
+
 
     public void SetStun(float timer)
     {
@@ -1257,6 +1411,7 @@ public class Unit : MonoBehaviour
 
 
         animator.SetTrigger("Skill" + (num + 1));
+        yield return new WaitForSeconds(0.35f);
         List<RangeUnitList> unitLists = ResearchSkillTarget(transform.position, AttackRange);
 
         ParticleSystem particle = SkillEffect[2].GetComponent<ParticleSystem>();

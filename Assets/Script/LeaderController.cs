@@ -21,6 +21,11 @@ public class LeaderController : MonoBehaviour
         if (unit.Status == Status.Dead)
             return;
 
+        //if (cap.enabled)
+        //{
+        //    cap.enabled = false;
+        //}
+
         Move();
         Rotation();
 
